@@ -1,0 +1,17 @@
+{
+  "name": "smbc-treasury-api",
+  "version": "1.0.0",
+  "description": "Sample Treasury API for SMBC Platform",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

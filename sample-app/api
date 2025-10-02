@@ -1,3 +1,0 @@
-// Startup.cs
-services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureAd"));

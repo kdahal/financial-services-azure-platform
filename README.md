@@ -12,6 +12,7 @@ The platform supports financial applications such as treasury management APIs an
 - **Governance**: Azure Policy for compliance enforcement, RBAC for access control, and Blueprints for repeatable environments.
 - **CI/CD**: Automated provisioning and testing via GitHub Actions, with IaC security scans (e.g., Checkov).
 - **Cross-Functional Integration**: Aligns with Security (Key Vault), DevOps (Azure Monitor), and Application teams.
+- **Sample Apps**: Node.js API for treasury endpoints; static HTML/JS dashboard.
 
 This setup ensures consistency, auditability, and risk mitigation in a highly regulated environment.
 
@@ -90,17 +91,20 @@ graph TB
 
 ## Prerequisites
 
-- **Azure Subscription**: With Contributor role; enable necessary services (e.g., AKS, APIM).
+- **Azure Subscription**: With Contributor role; enable necessary services (e.g., AKS, APIM, Container Registry). Create an ACR (Azure Container Registry) named e.g., `acr-smbc` in your resource group.
 - **GitHub Repository**: Fork/clone this repo and enable GitHub Actions.
 - **Tools**:
   - Terraform v1.5+ (or use [Azure Cloud Shell](https://shell.azure.com/)).
   - Azure CLI: Authenticate with `az login`.
   - Docker: For building sample app images.
-  - kubectl: For AKS interactions (optional, post-deployment).
-- **Secrets**: Store in GitHub Secrets:
-  - `AZURE_SUBSCRIPTION_ID`
-  - `AZURE_CLIENT_ID` (from OIDC app registration)
-  - `AZURE_TENANT_ID`
+  - kubectl: For AKS interactions (optional, post-deployment). Install with `az aks install-cli`.
+- **Azure AD App Registration**: For OAuth/OpenID. Register an app in Azure AD, note Client ID/Tenant ID. Expose API scope e.g., `api://treasury-api/.default`.
+- **GitHub Secrets**: In repo Settings > Secrets and variables > Actions, add:
+  - `AZURE_SUBSCRIPTION_ID`: Your Azure sub ID.
+  - `AZURE_CLIENT_ID`: From OIDC federation (create Service Principal with `az ad sp create-for-rbac --sdk-auth`).
+  - `AZURE_TENANT_ID`: Your Azure AD tenant ID.
+  - `AZURE_AKS_KUBECONFIG`: (Post-deploy) Output from Terraform.
+  - `AZURE_STATIC_WEB_APPS_API_TOKEN`: (Optional) For web deploy; generate from Static Web App resource.
 - **Certifications**: Assumes Azure Solutions Architect Expert or equivalent knowledge.
 
 ## Project Structure
@@ -132,67 +136,90 @@ financial-services-azure-platform/
 └── README.md                      # This file
 ```
 
-## Setup and Deployment
+## Deployment Instructions
+
+### Step 1: Prepare Azure Resources
+1. Login to Azure CLI: `az login`.
+2. Create a Service Principal for GitHub OIDC (secure auth, no secrets):
+   ```bash
+   az ad sp create-for-rbac --name "github-oidc" --role contributor --scopes /subscriptions/<sub-id> --sdk-auth --create-cert
+
+Copy the output JSON; extract clientId, clientSecret, tenantId. Add to GitHub Secrets as AZURE_CLIENT_ID, etc. (Secret is short-lived; use OIDC instead for prod).
+3. Create ACR: az acr create --resource-group <rg> --name acrsmbc --sku Basic --admin-enabled true.
+4. (Optional) Create Azure AD App: In Azure Portal > Azure AD > App registrations > New. Add redirect URI for web app.
+
+
+## Step 2: Local/ Manual Deployment
 
 ### 1. Clone and Initialize
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/kdahal/financial-services-azure-platform.git
 cd financial-services-azure-platform
-terraform init  # Initializes providers and backend
 ```
 
-### 2. Configure Environment
-Copy and edit `.tfvars` files in `terraform/environments/`:
-```hcl
-# Example: terraform/environments/prod.tfvars
-location            = "East US 2"
-environment         = "prod"
-resource_group_name = "rg-smbc-prod"
-```
-
-### 3. Local Deployment (Terraform)
+### 2. Init Terraform
 ```bash
-# Plan changes
-terraform plan -var-file=environments/prod.tfvars
-
-# Apply (deploy resources)
-terraform apply -var-file=environments/prod.tfvars
-
-# Outputs (e.g., APIM URL)
-terraform output apim_endpoint
+terraform init
 ```
 
-### 4. CI/CD Pipeline
-- **Trigger**: Push to `main` or PRs.
-- **Steps**: Validates IaC, runs security scans, applies Terraform, builds/pushes Docker images, deploys to AKS.
-- View runs: GitHub > Actions tab.
-- For PRs: Use `terraform-plan.yml` for diff previews.
-
-Example workflow excerpt (`.github/workflows/ci-cd.yml`):
-```yaml
-name: SMBC Azure DevOps Pipeline
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-# ... (full YAML in repo)
-```
-
-### 5. Deploy Sample Application
-After Terraform apply:
+### 3. Plan (use dev for testing)
 ```bash
-# Build and push API image (or via CI/CD)
-docker build -t <your-acr>.azurecr.io/sample-api:latest ./sample-app/api/
-az acr login --name <your-acr>
-docker push <your-acr>.azurecr.io/sample-api:latest
-
-# Deploy to AKS
-kubectl apply -f sample-app/api/k8s/deployment.yaml
+terraform plan -var-file="terraform/environments/dev.tfvars"
 ```
 
-- **Test API**: `curl -H "Authorization: Bearer <token>" https://<apim-gateway>/treasury/transactions`
-- **Web App**: Deploy to Static Web Apps via Azure Portal or GitHub integration.
+### 4. Apply
+```bash
+terraform apply -var-file="terraform/environments/dev.tfvars"
+```
+- This deploys RG, Key Vault, Cosmos DB, AKS, APIM, Policies.
+- Note outputs: apim_endpoint, aks_kubeconfig. Export kubeconfig: az aks get-credentials --resource-group <rg> --name <aks-name>.
+
+### 5. Build & Deploy API
+```bash
+cd sample-app/api
+docker build -t acrsmbc.azurecr.io/sample-api:latest .
+az acr login --name acrsmbc
+docker push acrsmbc.azurecr.io/sample-api:latest
+cd ../..
+kubectl apply -f sample-app/api/k8s/deployment.yaml  # Update image tag in YAML first
+```
+
+### 6. Deploy Web App
+- In Azure Portal: Create Static Web App > Link to GitHub repo > Set app location /sample-app/web.
+- Or trigger the optional workflow by pushing to main.
+
+### 7. Test
+- API Health: curl https://<apim-endpoint>/health (via APIM proxy).
+- Auth Test: Get token from Azure AD (use Postman with OAuth), then curl -H "Authorization: Bearer <token>" https://<apim-endpoint>/treasury/transactions.
+- Web: Visit Static Web App URL, login, see transactions.
+
+### Step 3: CI/CD Deployment (Automated)
+- Push to main: Triggers ci-cd.yml → Terraform apply → Docker build/push → K8s deploy.
+- PR to main: Triggers terraform-plan.yml → Plan output in comments.
+- Monitor: GitHub > Actions.
+Deployment time: ~10-15 mins for infra; ~5 mins for apps. Costs: Minimal for dev (~$0.50/hr for AKS; monitor in Portal).
+
+## Cleanup: Delete All Resources (Avoid Costs)
+To tear down everything and stop billing:
+
+1. Destroy Terraform resources:
+```bash
+bashterraform destroy -var-file="terraform/environments/dev.tfvars"  # Confirm 'yes'
+```
+- This removes RG, AKS, APIM, Cosmos, etc. (Idempotent; safe).
+
+2. Delete ACR images (if manual pushes):
+```bash
+bashaz acr repository delete --name acrsmbc --image sample-api:latest --yes
+```
+3. Delete Static Web App (Portal > Resource > Delete).
+4. Revoke Service Principal (if created):
+```bash
+bashaz ad sp delete --id <client-id>
+```
+5. Check Azure Portal > Cost Management for any lingering resources; set budgets/alerts for future.
+
+Run destroy immediately after testing. Total cost for 1-hour test: <$1.
 
 ## Security and Compliance
 
