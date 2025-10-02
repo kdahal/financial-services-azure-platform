@@ -18,7 +18,7 @@ This setup ensures consistency, auditability, and risk mitigation in a highly re
 
 ## High-Level Architecture
 
-Below is a Mermaid diagram illustrating the architecture. Copy-paste into [mermaid.live](https://mermaid.live) for interactivity.
+Below is a Mermaid diagram illustrating the architecture.
 
 ```mermaid
 graph TB
@@ -105,7 +105,6 @@ graph TB
   - `AZURE_TENANT_ID`: Your Azure AD tenant ID.
   - `AZURE_AKS_KUBECONFIG`: (Post-deploy) Output from Terraform.
   - `AZURE_STATIC_WEB_APPS_API_TOKEN`: (Optional) For web deploy; generate from Static Web App resource.
-- **Certifications**: Assumes Azure Solutions Architect Expert or equivalent knowledge.
 
 ## Project Structure
 
@@ -145,8 +144,12 @@ financial-services-azure-platform/
    az ad sp create-for-rbac --name "github-oidc" --role contributor --scopes /subscriptions/<sub-id> --sdk-auth --create-cert
 
 Copy the output JSON; extract clientId, clientSecret, tenantId. Add to GitHub Secrets as AZURE_CLIENT_ID, etc. (Secret is short-lived; use OIDC instead for prod).
-3. Create ACR: az acr create --resource-group <rg> --name acrsmbc --sku Basic --admin-enabled true.
-4. (Optional) Create Azure AD App: In Azure Portal > Azure AD > App registrations > New. Add redirect URI for web app.
+3. Create ACR:
+    ```bash 
+az acr create --resource-group <rg> --name acrsmbc --sku Basic --admin-enabled true.
+    ```
+4. (Optional) Create Azure AD App:
+ In Azure Portal > Azure AD > App registrations > New. Add redirect URI for web app.
 
 
 ## Step 2: Local/ Manual Deployment
@@ -197,7 +200,8 @@ kubectl apply -f sample-app/api/k8s/deployment.yaml  # Update image tag in YAML 
 - Push to main: Triggers ci-cd.yml → Terraform apply → Docker build/push → K8s deploy.
 - PR to main: Triggers terraform-plan.yml → Plan output in comments.
 - Monitor: GitHub > Actions.
-Deployment time: ~10-15 mins for infra; ~5 mins for apps. Costs: Minimal for dev (~$0.50/hr for AKS; monitor in Portal).
+- Deployment time: ~10-15 mins for infra; ~5 mins for apps. 
+- Costs: Minimal for dev (~$0.50/hr for AKS; monitor in Portal).
 
 ## Cleanup: Delete All Resources (Avoid Costs)
 To tear down everything and stop billing:
