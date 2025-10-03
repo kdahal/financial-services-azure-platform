@@ -142,7 +142,7 @@ financial-services-azure-platform/
 2. Create a Service Principal for GitHub OIDC (secure auth, no secrets):
    ```bash
    az ad sp create-for-rbac --name "github-oidc" --role contributor --scopes /subscriptions/<sub-id> --sdk-auth --create-cert
-
+    ```
 Copy the output JSON; extract clientId, clientSecret, tenantId. Add to GitHub Secrets as AZURE_CLIENT_ID, etc. (Secret is short-lived; use OIDC instead for prod).
 3. Create ACR:
     ```bash 

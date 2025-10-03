@@ -14,7 +14,7 @@ terraform {
     resource_group_name  = "rg-terraform-state"
     storage_account_name = "stterraformstate"
     container_name       = "tfstate"
-    key                  = "prod.terraform.tfstate"
+    key                  = "dev.terraform.tfstate"  # Use 'prod' for prod.tfvars
   }
 }
 
@@ -24,10 +24,7 @@ provider "azurerm" {
 
 provider "azuread" {}
 
-# Variables
-variable "location" { default = "East US" }
-variable "environment" { default = "prod" }
-variable "resource_group_name" { default = "rg-smbc-platform" }
+data "azurerm_client_config" "current" {}
 
 # Resource Group
 resource "azurerm_resource_group" "main" {
@@ -39,7 +36,22 @@ resource "azurerm_resource_group" "main" {
   }
 }
 
-# Key Vault Module
+# VNet Stub (for AKS subnet; expand as needed)
+resource "azurerm_virtual_network" "vnet" {
+  name                = "vnet-smbc-${var.environment}"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+}
+
+resource "azurerm_subnet" "subnet" {
+  name                 = "subnet-aks"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+# Key Vault Module (first, for secrets)
 module "key_vault" {
   source              = "./modules/key-vault"
   resource_group_name = azurerm_resource_group.main.name
@@ -52,7 +64,7 @@ module "cosmos_db" {
   source              = "./modules/cosmos-db"
   resource_group_name = azurerm_resource_group.main.name
   location            = var.location
-  kv_id               = module.key_vault.vault_id  # Inject secrets
+  kv_id               = module.key_vault.vault_id
 }
 
 # AKS Cluster Module
@@ -61,10 +73,10 @@ module "aks" {
   resource_group_name = azurerm_resource_group.main.name
   location            = var.location
   kv_id               = module.key_vault.vault_id
-  subnet_id           = module.vnet.subnet_id  # Assume VNet module
+  subnet_id           = azurerm_subnet.subnet.id
 }
 
-# APIM Module with Security
+# APIM Module
 module "apim" {
   source              = "./modules/apim-gateway"
   resource_group_name = azurerm_resource_group.main.name
@@ -75,15 +87,6 @@ module "apim" {
 
 # Governance Policies
 module "policies" {
-  source              = "./modules/policies"
-  scope               = azurerm_resource_group.main.id
-}
-
-# Outputs
-output "aks_kubeconfig" {
-  value     = module.aks.kubeconfig
-  sensitive = true
-}
-output "apim_endpoint" {
-  value = module.apim.gateway_url
+  source = "./modules/policies"
+  scope  = azurerm_resource_group.main.id
 }
