@@ -1,47 +1,42 @@
-variable "resource_group_name" {}
-variable "location" {}
-variable "kv_id" {}
-variable "subnet_id" { default = "" }  # Assume from VNet module
-
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = "aks-smbc-${var.environment}"
   location            = var.location
   resource_group_name = var.resource_group_name
-  dns_prefix          = "aks-smbc"
+  dns_prefix          = var.dns_prefix
 
   default_node_pool {
-    name       = "default"
-    node_count = 1  # Scale for dev
-    vm_size    = "Standard_D2_v2"
-    enable_auto_scaling = true
-    min_count  = 1
-    max_count  = 3
+    name           = "default"
+    node_count     = var.node_count
+    vm_size        = var.vm_size
+    os_disk_size_gb = var.os_disk_size_gb
+
+    kubelet_config {
+      cpu_manager_policy = "static"
+      cpu_cfs_quota_enabled = true
+    }
+
+    addon_profile {
+      oms_agent {
+        enabled = var.enable_oms_agent
+        log_analytics_workspace_id = var.log_analytics_workspace_id
+      }
+    }
+  }
+
+  network_profile {
+    network_plugin    = var.network_plugin
+    network_policy    = var.network_policy
+    service_cidr      = var.service_cidr
+    dns_service_ip    = var.dns_service_ip
+    docker_bridge_cidr = var.docker_bridge_cidr
+    pod_cidr          = var.pod_cidr
   }
 
   identity {
     type = "SystemAssigned"
   }
 
-  # OIDC for GitHub Actions
-  kubelet_config {
-    oidc_issuer_url = "https://sts.googleapis.com"  # Placeholder; use Azure OIDC
-  }
-
-  network_profile {
-    network_plugin = "azure"
-    service_cidr   = "10.0.0.0/16"
-    dns_service_ip = "10.0.0.10"
-  }
-
-  # Monitoring
-  addon_profile {
-    oms_agent {
-      enabled                    = true
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.example.id  # Assume created
-    }
-  }
-
-  depends_on = [var.kv_id]
+  tags = var.tags
 }
 
 resource "azurerm_log_analytics_workspace" "example" {
@@ -49,12 +44,5 @@ resource "azurerm_log_analytics_workspace" "example" {
   location            = var.location
   resource_group_name = var.resource_group_name
   sku                 = "PerGB2018"
-}
-
-output "kubeconfig" {
-  value = azurerm_kubernetes_cluster.aks.kube_config_raw
-}
-
-output "cluster_id" {
-  value = azurerm_kubernetes_cluster.aks.id
+  retention_in_days   = 30
 }
