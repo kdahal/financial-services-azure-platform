@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMBC Financial Dashboard</title>
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
+    <style> body { font-family: Arial; margin: 20px; } button { padding: 10px; } </style>
+</head>
+<body>
+    <h1>SMBC Treasury Dashboard</h1>
+    <button id="login">Login with Azure AD</button>
+    <button id="logout">Logout</button>
+    <div id="transactions"></div>
+    <script>
+        const msalConfig = {
+            auth: { clientId: 'your-azure-ad-app-id' } // Replace with real App ID
+        };
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        document.getElementById('login').onclick = async () => {
+            const loginResponse = await msalInstance.loginPopup({ scopes: ['User.Read'] });
+            const tokenResponse = await msalInstance.acquireTokenSilent({ scopes: ['api://your-api-scope'] });
+            fetchTransactions(tokenResponse.accessToken);
+        };
+        document.getElementById('logout').onclick = () => msalInstance.logoutPopup();
+        async function fetchTransactions(token) {
+            const response = await fetch('https://<your-apim-gateway>/treasury/transactions', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await response.json();
+            document.getElementById('transactions').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+    </script>
+</body>
+</html>

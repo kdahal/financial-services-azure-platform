@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: treasury-api
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: treasury-api
+  template:
+    metadata:
+      labels:
+        app: treasury-api
+    spec:
+      containers:
+      - name: treasury-api
+        image: acrsmbcdev.azurecr.io/sample-api:latest  # Update with your ACR name and tag
+        ports:
+        - containerPort: 3000
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: jwt-secret  # Create this Secret in AKS with Key Vault integration
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: treasury-api-service
+spec:
+  selector:
+    app: treasury-api
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer

@@ -1,0 +1,13 @@
+location          = "eastus2"
+environment       = "prod"
+resource_group_name = "rg-financial-prod"
+acr_name          = "acrsmbcprod"
+apim_name         = "apim-financial-prod"
+apim_sku          = "Premium_1"
+publisher_name    = "Financial Services Co."
+publisher_email   = "admin@financial.com"
+node_count        = 3
+vm_size           = "Standard_D4_v2"
+tenant_id         = "your-tenant-id" # Replace with actual tenant ID
+enable_free_tier  = false
+backend_url       = "https://example.com" # Update post-deployment with actual AKS LoadBalancer external IP

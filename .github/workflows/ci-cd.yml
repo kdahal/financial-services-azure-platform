@@ -1,0 +1,64 @@
+name: SMBC Azure DevOps Pipeline
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  TF_VERSION: '1.5.0'
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+    - name: Terraform Init
+      run: terraform init
+    - name: Terraform Validate
+      run: terraform validate
+    - name: Terraform Plan
+      if: github.event_name == 'pull_request'
+      run: terraform plan -var-file=environments/dev.tfvars
+    - name: IaC Security Scan (Checkov)
+      uses: bridgecrewio/checkov-action@v12
+      with:
+        directory: ./terraform/
+        framework: terraform
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve -var-file=environments/prod.tfvars -backend-config="key=prod.terraform.tfstate"
+  deploy-app:
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t acrsmbcdev.azurecr.io/sample-api:${{ github.sha }} ./sample-app/api/
+        az acr login --name acrsmbcdev
+        docker push acrsmbcdev.azurecr.io/sample-api:${{ github.sha }}
+    - name: Deploy to AKS
+      uses: azure/k8s-deploy@v4
+      with:
+        manifests: |
+          ./sample-app/api/k8s/deployment.yaml
+        images: |
+          acrsmbcdev.azurecr.io/sample-api:${{ github.sha }}
+        namespace: production
+        kubeconfig: ${{ secrets.AZURE_AKS_KUBECONFIG }} # From Terraform output

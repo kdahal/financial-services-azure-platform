@@ -1,0 +1,13 @@
+environment        = "dev"
+resource_group_name = "rg-financial-dev"
+location          = "eastus"
+acr_name          = "acrsmbcdev"
+apim_name         = "apim-financial-dev"
+apim_sku          = "Developer_1"
+publisher_name    = "Financial Services Co."
+publisher_email   = "admin@financial.com"
+node_count        = 1
+vm_size           = "Standard_D2_v2"
+tenant_id         = "your-tenant-id" # Replace with actual tenant ID from 'az account show --query tenantId -o tsv'
+enable_free_tier  = true
+backend_url       = "https://example.com" # Update post-deployment with actual AKS LoadBalancer external IP
