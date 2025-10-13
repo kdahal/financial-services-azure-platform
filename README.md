@@ -3,6 +3,7 @@
 [![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=azure&logoColor=white)](https://azure.microsoft.com/) [![Terraform](https://img.shields.io/badge/Terraform-623CE4?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/) [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
 
 This repository demonstrates a secure, scalable Azure cloud solution for financial services, tailored for institutions like Sumitomo Mitsui Banking Corporation (SMBC). It implements a mission-critical platform for risk-mitigated API/web services using Azure best practices, Terraform as Infrastructure as Code (IaC), and a CI/CD pipeline with GitHub Actions. The design emphasizes zero-trust security, regulatory compliance (e.g., PCI DSS, SOC 2), and cross-functional governance.
+![Demo PNG](docs/1-AZ-Resource.png)
 
 ## Project Overview
 
@@ -308,5 +309,3 @@ To tear down everything and stop billing:
 
 **License:** MIT (see LICENSE file)
 ```
-
-![Demo PNG](docs/1-AZ-Resource.png)
