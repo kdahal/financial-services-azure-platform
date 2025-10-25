@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: treasury-api
-        image: acrsmbcdev.azurecr.io/sample-api:latest  # Update with your ACR name and tag
+        image: acrsmbcdev.azurecr.io/sample-api:v1  # Update with your ACR name and tag
         ports:
         - containerPort: 3000
         env:

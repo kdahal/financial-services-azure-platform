@@ -28,7 +28,7 @@ variable "apim_name" {
 variable "apim_sku" {
   description = "APIM SKU"
   type        = string
-  default     = "Developer_1"
+  default     = "Developer"
 }
 
 variable "publisher_name" {
@@ -61,7 +61,7 @@ variable "tenant_id" {
 }
 
 variable "enable_free_tier" {
-  description = "Enable Cosmos DB free tier"
+  description = "Enable free tier for Cosmos DB"
   type        = bool
   default     = true
 }
@@ -70,4 +70,9 @@ variable "backend_url" {
   description = "Backend URL for APIM policy"
   type        = string
   default     = "https://example.com"
+}
+
+variable "object_id" {
+  description = "Azure AD object ID for Key Vault access"
+  type        = string
 }

@@ -1,23 +1,3 @@
-variable "resource_group_name" {
-  type = string
-}
-
-variable "location" {
-  type = string
-}
-
-variable "environment" {
-  type = string
-}
-
-variable "tenant_id" {
-  type = string
-}
-
-variable "object_id" {
-  type = string
-}
-
 resource "azurerm_key_vault" "kv" {
   name                        = "kv-smbc-${var.environment}"
   location                    = var.location
@@ -30,7 +10,7 @@ resource "azurerm_key_vault" "kv" {
     tenant_id = var.tenant_id
     object_id = var.object_id
     secret_permissions = [
-      "Get", "List", "Set", "Delete"
+      "Get", "List", "Set", "Delete", "Recover", "Purge",
     ]
     key_permissions = [
       "Get", "List", "Create", "Delete"

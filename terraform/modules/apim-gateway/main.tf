@@ -1,49 +1,3 @@
-variable "resource_group_name" {
-  type = string
-}
-
-variable "location" {
-  type = string
-}
-
-variable "environment" {
-  type = string
-}
-
-variable "aks_id" {
-  type = string
-}
-
-variable "kv_id" {
-  type = string
-}
-
-variable "apim_name" {
-  type = string
-}
-
-variable "apim_sku" {
-  type    = string
-  default = "Developer_1"
-}
-
-variable "publisher_name" {
-  type = string
-}
-
-variable "publisher_email" {
-  type = string
-}
-
-variable "tenant_id" {
-  type = string
-}
-
-variable "backend_url" {
-  type    = string
-  default = "https://example.com"
-}
-
 resource "azurerm_api_management" "apim" {
   name                = var.apim_name
   location            = var.location
@@ -56,21 +10,6 @@ resource "azurerm_api_management" "apim" {
     type = "SystemAssigned"
   }
 
-  policy {
-    xml_content = <<XML
-    <policies>
-      <inbound>
-        <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
-          <openid-config url="https://login.microsoftonline.com/${var.tenant_id}/v2.0/.well-known/openid-configuration" />
-          <audiences>
-            <audience>api://treasury-api</audience>
-          </audiences>
-        </validate-jwt>
-        <set-backend-service base-url="${var.backend_url}" />
-      </inbound>
-    </policies>
-    XML
-  }
 
   depends_on = [var.kv_id]
 }
@@ -86,21 +25,41 @@ resource "azurerm_api_management_api" "sample_api" {
   protocols           = ["https"]
 }
 
+/*
 resource "azurerm_api_management_policy" "waf" {
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-  policy_name         = "global-waf-policy"
-  xml_content = <<XML
+  api_management_id = azurerm_api_management.apim.id
+
+  policy_xml = <<XML
   <policies>
     <inbound>
-      <ip-filter action="block">
-        <address>192.168.1.0/24</address>
-      </ip-filter>
-      <rate-limit calls="100" renewal-period="60" />
+      <base />
+      <set-backend-service base-url="${var.backend_url}" />
+      <choose>
+        <when condition="@(context.Request.Url.Host.Contains('api.example.com'))">
+          <validate-jwt header-name="Authorization" failed-validation-httpcode="401">
+            <openid-config url="https://login.microsoftonline.com/${var.tenant_id}/v2.0/.well-known/openid-configuration" />
+            <required-claims>
+              <claim name="aud" match="any">
+                <value>api://default</value>
+              </claim>
+            </required-claims>
+          </validate-jwt>
+        </when>
+      </choose>
     </inbound>
+    <backend>
+      <base />
+    </backend>
+    <outbound>
+      <base />
+    </outbound>
+    <on-error>
+      <base />
+    </on-error>
   </policies>
-  XML
+XML
 }
+*/
 
 output "gateway_url" {
   value = azurerm_api_management.apim.gateway_url

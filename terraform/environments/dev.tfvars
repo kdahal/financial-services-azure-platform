@@ -1,13 +1,25 @@
-environment        = "dev"
+# Environment-specific variables for dev
+environment      = "dev"
+location         = "East US"
 resource_group_name = "rg-financial-dev"
-location          = "eastus"
-acr_name          = "acrsmbcdev"
-apim_name         = "apim-financial-dev"
-apim_sku          = "Developer_1"
-publisher_name    = "Financial Services Co."
-publisher_email   = "admin@financial.com"
-node_count        = 1
-vm_size           = "Standard_D2_v2"
-tenant_id         = "your-tenant-id" # Replace with actual tenant ID from 'az account show --query tenantId -o tsv'
-enable_free_tier  = true
-backend_url       = "https://example.com" # Update post-deployment with actual AKS LoadBalancer external IP
+
+# Azure AD details
+tenant_id        = "your-tenant-id-here"  # From az account show --query tenantId -o tsv
+object_id        = "your-object-id-here"  # From az ad signed-in-user show --query id -o tsv
+
+# AKS settings
+node_count       = 1
+vm_size          = "Standard_B2s"
+
+# APIM settings
+apim_sku = "Developer_1"
+publisher_name   = "Contoso Financial"
+publisher_email  = "admin@contoso.com"
+backend_url      = "http://your-backend-url"  # Update post-apply with AKS IP
+
+# Cosmos DB
+enable_free_tier = true
+
+# Names (required without defaults)
+acr_name         = "acrsmbcdev"  # Ensure unique
+apim_name        = "apim-smbc-dev"

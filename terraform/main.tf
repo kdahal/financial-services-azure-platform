@@ -10,12 +10,14 @@ terraform {
       version = "~> 2.0"
     }
   }
+  /*
   backend "azurerm" {
     resource_group_name = "rg-terraform-state"
     storage_account_name = "stterraformstate"
     container_name = "tfstate"
     key = "dev.terraform.tfstate" # Override key to "prod.terraform.tfstate" for prod deployments
   }
+  */
 }
 
 provider "azurerm" {
@@ -80,7 +82,7 @@ module "cosmos_db" {
   location            = var.location
   environment         = var.environment
   kv_id               = module.key_vault.vault_id
-  enable_free_tier    = var.enable_free_tier
+  enable_free_tier = var.enable_free_tier
 }
 
 # AKS Cluster Module

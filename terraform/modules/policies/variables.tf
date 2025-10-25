@@ -1,4 +1,4 @@
 variable "scope" {
-  description = "Scope for policy assignment (e.g., RG ID)"
+  description = "Resource Group ID for policy scope"
   type        = string
 }
